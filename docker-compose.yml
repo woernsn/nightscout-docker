@@ -1,27 +1,49 @@
-broker:
-  image: 'prologic/mosquitto:latest'
-  ports:
-    - '1883:1883'
-database:
-  image: 'tutum/mongodb:latest'
-  environment:
-    - MONGODB_PASS={{** CHANGE ME **}}
+version: "3"
 
-# Uncomment if you want to expose the MongoDB port directly
-# If you're using the API interface (highly recommended) then you can 
-# safely leave this commented out 
-#  ports:
-#    - '27017:27017'
+services:
 
-nightscout:
-  image: 'nightscout/cgm-remote-monitor-development:latest'
-  environment:
-    - API_SECRET={{** CHANGE ME **}}
-    - 'MONGO_CONNECTION=mongodb://admin:{{** CHANGE ME **}}@database/admin'
-    - 'MQTT_MONITOR=mqtt://{{** CHANGE ME **}}@broker'
-    - PORT=1337
-  links:
-    - broker
-    - database
-  ports:
-    - '1337:1337'
+  broker:
+    image: 'eclipse-mosquitto:latest'
+    ports:
+      - '1883:1883'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1883"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  database:
+    image: 'mongo:latest'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASS}
+    # Uncomment and configure to store data in a mapped directory on host
+    # volumes:
+      # - /mnt/c/dev/tmp/nightscout/data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongo admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  nightscout:
+    build:
+      context: https://github.com/nightscout/cgm-remote-monitor.git
+      dockerfile: Dockerfile
+    # The github Dockerfile. is probably more up to date than the imae
+    # image: 'nightscout/cgm-remote-monitor'
+    environment:
+      - API_SECRET=${API_SECRET}
+      - 'MONGO_CONNECTION=mongodb://admin:${MONGODB_PASS}@database/admin'
+      - 'MQTT_MONITOR=mqtt://${MONGODB_PASS}@broker'
+      - PORT=1337
+      - INSECURE_USE_HTTP=true # We are using a SSL proxy for HTTPS
+    restart: on-failure
+    depends_on:
+      - broker
+      - database
+    links:
+      - broker
+      - database
+    ports:
+      - '1337:1337'
