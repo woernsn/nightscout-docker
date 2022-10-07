@@ -38,6 +38,9 @@ services:
       - 'MQTT_MONITOR=mqtt://${MONGODB_PASS}@broker'
       - PORT=1337
       - INSECURE_USE_HTTP=true # We are using a SSL proxy for HTTPS
+      - AUTH_DEFAULT_ROLES=denied
+      - 'ENABLE=careportal basal Iob Cob Bwp Ar2 boluscalc cage sage iage pump cors openaps'
+      - TIME_FORMAT=24
     restart: on-failure
     depends_on:
       - broker
