@@ -7,7 +7,7 @@ services:
     ports:
       - '1883:1883'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1883"]
+      test: ["CMD", "wget", "http://localhost:1883", "-O", "/dev/null"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -27,11 +27,7 @@ services:
       retries: 5
 
   nightscout:
-    build:
-      context: https://github.com/nightscout/cgm-remote-monitor.git
-      dockerfile: Dockerfile
-    # The github Dockerfile. is probably more up to date than the imae
-    # image: 'nightscout/cgm-remote-monitor'
+    image: 'nightscout/cgm-remote-monitor'
     environment:
       - API_SECRET=${API_SECRET}
       - 'MONGO_CONNECTION=mongodb://admin:${MONGODB_PASS}@database/admin'
